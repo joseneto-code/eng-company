@@ -1,0 +1,6 @@
+# Markdown, YAML e shell sempre com LF — install.sh com CRLF quebra no Linux
+# ("bad interpreter: /usr/bin/env bash^M").
+* text=auto eol=lf
+
+# PowerShell é o único que fica com CRLF.
+*.ps1 text eol=crlf

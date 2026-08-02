@@ -1,0 +1,120 @@
+# Sidecar do Paperclip para a Eng Company.
+#
+# Aplicado por deep-merge: campos aqui sobrescrevem, campos extras existentes
+# na instância são preservados.
+#
+# Publicação:  paperclipai company import . --dry-run
+# Referência:  docs/paperclip.md
+
+schema: paperclip/v1
+
+# ===========================================================================
+# AGENTS — um entry por pasta em agents/<slug>/
+#
+# Roteamento de modelo por tier. O princípio é o do playbook: Opus só onde a
+# decisão é cara ou irreversível. IC de engenharia entra nessa conta porque
+# uma policy de RLS errada não gera erro — gera vazamento silencioso.
+# ===========================================================================
+
+agents:
+  ceo:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-opus-4-7
+        timeoutSec: 1800
+        graceSec: 30
+        maxTurnsPerRun: 120
+    inputs:
+      env:
+        ANTHROPIC_API_KEY: { kind: secret, requirement: required }
+
+  eng-orquestrador:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-sonnet-4-6
+        timeoutSec: 1800
+        graceSec: 30
+        maxTurnsPerRun: 150
+    inputs:
+      env:
+        ANTHROPIC_API_KEY: { kind: secret, requirement: required }
+
+  eng-database:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-opus-4-7
+        timeoutSec: 2400
+        graceSec: 30
+        maxTurnsPerRun: 200
+    inputs:
+      env:
+        ANTHROPIC_API_KEY: { kind: secret, requirement: required }
+        DATABASE_URL:
+          kind: secret
+          requirement: optional   # só o repo do produto precisa
+
+  eng-frontend:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-opus-4-7
+        timeoutSec: 2400
+        graceSec: 30
+        maxTurnsPerRun: 200
+    inputs:
+      env:
+        ANTHROPIC_API_KEY: { kind: secret, requirement: required }
+
+# ===========================================================================
+# ROUTINES — heartbeat agendado custa mesmo com o agente ocioso.
+#
+# Só o CEO tem schedule, e semanal. Todo o resto acorda por atribuição
+# (wakeOnAssignment), que é event-driven e não gasta tick à toa.
+# ===========================================================================
+
+routines:
+  revisao-semanal:
+    triggers:
+      - kind: schedule
+        cronExpression: "0 9 * * 1"      # segunda, 9h — 5 partes, nunca shorthand
+        timezone: America/Sao_Paulo
+    assignee: ceo
+    description: >
+      Revisa objetivos abertos, valida critério de aceite do que foi entregue,
+      reordena a fila e escala para o board o que trava.
+
+# ===========================================================================
+# BUDGETS — sempre. Sem budget per-agent, um loop derruba a company inteira.
+# Valores em centavos USD/mês. 80% = warning, 100% = auto-pause.
+# ===========================================================================
+
+budgets:
+  company:
+    monthlyCents: 40000        # US$ 400
+  agents:
+    ceo:
+      monthlyCents: 8000       # US$ 80 — pensa muito, executa pouco
+    eng-orquestrador:
+      monthlyCents: 6000       # US$ 60 — Sonnet, roteamento
+    eng-database:
+      monthlyCents: 12000      # US$ 120
+    eng-frontend:
+      monthlyCents: 12000      # US$ 120
+    default:
+      monthlyCents: 3000
+
+# ===========================================================================
+# CONCURRENCY
+#
+# maxConcurrentPerAgent: 1 é obrigatório aqui, não preferência: dois runs do
+# eng-database em paralelo podem gerar duas migrations com o mesmo timestamp
+# e travar o `migrate deploy`.
+# ===========================================================================
+
+concurrency:
+  maxConcurrentAgents: 3
+  maxConcurrentPerAgent: 1
+  queueStrategy: priority

@@ -1,0 +1,25 @@
+# Segredos — nunca versionar
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Backups do fluxo de edição segura do Paperclip
+*.bak-*
+
+# Estado local dos agentes (memória per-agent e logs diários)
+memory/per-agent/*/
+memory/shared/daily/
+!memory/per-agent/.gitkeep
+
+# Sistema operacional / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
