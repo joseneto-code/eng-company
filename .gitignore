@@ -23,3 +23,16 @@ desktop.ini
 # Python
 __pycache__/
 *.pyc
+# --- backup: padrões de segurança ---
+node_modules/
+.next/
+venv/
+.venv/
+dist/
+build/
+*.log
+*.p12
+*.pfx
+id_rsa*
+.pnpm-store/
+.vercel/
